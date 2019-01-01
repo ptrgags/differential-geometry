@@ -1,3 +1,9 @@
+/**
+ * Cissoid of Diocles
+ *
+ * See for example
+ * https://en.wikipedia.org/wiki/Cissoid_of_Diocles
+ */
 var SCALE = 100; // pixels per unit
 var PIXEL = 1.0 / SCALE;
 
