@@ -8,3 +8,4 @@ the parametric curves mentioned in the book.
 ## Curves so far
 
 * Cycloid
+* Cissoid of Diocles
