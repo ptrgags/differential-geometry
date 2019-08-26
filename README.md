@@ -9,3 +9,4 @@ the parametric curves mentioned in the book.
 
 * Cycloid
 * Cissoid of Diocles
+* Tractrix
