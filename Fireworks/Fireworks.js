@@ -1,12 +1,13 @@
 const SPEED = 100;
 const EXPLODE_HEIGHT = 400;
-const EXPLODE_TIME = 1;
 const FPS = 30;
 const NUM_FRAGMENTS = 1000;
 
 const v0 = 20.0;
 const g = 9.81;
-const y0= 100.0;
+const y0 = 100.0;
+const EXPLODE_TIME = 1.0;
+const ROCKET_VELOCITY = y0;
 
 /**
  * Parabola that serves as the envelope of the superposition
@@ -91,30 +92,25 @@ class Scaler {
 }
 
 class Rocket {
-  constructor(explode_time, explode_height) {
-    this.explode_time = explode_time;
-    this.explode_height = explode_height;
-    this.WIDTH = 10;
-  }
-  
-  get velocity() {
-    return this.explode_height / this.explode_time;
-  }
-  
-  position(t) {
-    return this.velocity * t;
-  }
-  
-  render(t) {
-    if (t > this.explode_time) {
-      return;
+    static get SIZE() {
+        return 1;
     }
-    
-    const y = height - this.position(t);
-    noFill();
-    stroke(255);
-    rect(width / 2 - this.WIDTH / 2, y + this.WIDTH, this.WIDTH, this.WIDTH);   
-  }
+
+    constructor(velocity) {
+        this.velocity = velocity;
+    }
+  
+    position(t) {
+        return this.velocity * t;
+    }
+  
+    render(t) {
+        const w = Rocket.SIZE;
+        const y = this.position(t);
+        noFill();
+        stroke(255);
+        rect(-w / 2, y - w / 2, w, w);   
+    }
 }
 
 class Fragment {
@@ -179,6 +175,7 @@ function setup() {
 
     envelope = new Envelope();
     scaler = new Scaler();
+    rocket = new Rocket(ROCKET_VELOCITY);
   /* 
   rocket = new Rocket(EXPLODE_TIME, EXPLODE_HEIGHT);
   for (let i = 0; i < NUM_FRAGMENTS; i++) {
@@ -194,7 +191,14 @@ function draw() {
 
     scaler.start_scaling();
     envelope.render();
-    scaler.stop_scaling();
+
+    const t = frameCount / FPS;
+    if (t < EXPLODE_TIME) {
+        rocket.render(t)
+    } else {
+        //
+    }
+
     /*
   const t = frameCount / FPS;
   if (t < EXPLODE_TIME + 0.01) {
@@ -207,6 +211,8 @@ function draw() {
     frag.render(t);
   }
   */
+
+    scaler.stop_scaling();
 
 }
 
