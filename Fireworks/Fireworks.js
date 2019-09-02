@@ -1,7 +1,5 @@
-const SPEED = 100;
-const EXPLODE_HEIGHT = 400;
 const FPS = 30;
-const NUM_FRAGMENTS = 1000;
+const NUM_FRAGMENTS = 100;
 
 const v0 = 20.0;
 const g = 9.81;
@@ -59,8 +57,6 @@ class Envelope {
             vertex(curr.x, curr.y);
         }
         endShape();
-
-        rect(-Envelope.MAX_X, 0, 2 * Envelope.MAX_X, 2 * Envelope.MAX_X);
     }
 }
 
@@ -83,7 +79,7 @@ class Scaler {
         translate(width / 2, height / 2 + this.size_pixels / 2);
         scale(1, -1);
         scale(scale_factor, scale_factor);
-        strokeWeight(1.0 / scale_factor);
+        strokeWeight(2.0 / scale_factor);
     }
 
     stop_scaling() {
@@ -114,53 +110,79 @@ class Rocket {
 }
 
 class Fragment {
-  constructor(explode_time, explode_height, speed) {
-    this.explode_time = explode_time;
-    this.explode_height = explode_height;
-    this.initial_position = createVector(width / 2, explode_height);
-    this.initial_velocity = p5.Vector.random2D().mult(speed);
-    this.frag_color = color(255 * random(), 255 * random(), 255 * random());
-    this.GRAVITY = 10;
-    this.MAX_HISTORY = 1000;
-    this.POINT_SIZE = 2;
-    this.points = [];
-  }
-  
-  get acceleration() {
-    return createVector(0, -this.GRAVITY);
-  }
-  
-  velocity(t) {
-    return p5.Vector.add(this.initial_velocity, this.acceleration.mult(t));
-  }
-  
-  position(t) {
-    return createVector(0, 0)
-      .add(this.initial_position)
-      .add(this.velocity(t).mult(t))
-      .add(this.acceleration.mult(0.5 * t * t));
-  }
-  
-  update_history(pos) {
-    this.points.push(pos);
-    if (this.points.length > this.MAX_HISTORY) {
-      this.points.shift();
+    static get MAX_HISTORY() {
+        return 30;
     }
-  }
-  
-  render(t) {
-    // We only start once the firework reaches the explode height
-    if (t <= this.explode_time) {
-      return;
+
+    static get SIZE() {
+        return 0.5;
     }
-    const effective_t = t - this.explode_time;
-    
-    // Add a new point to the list
-    const pos = this.position(effective_t);
-    fill(this.frag_color);
-    noStroke();
-    ellipse(pos.x, height - pos.y, this.POINT_SIZE, this.POINT_SIZE);
-  }
+
+    constructor(angle) {
+        this.angle = angle;
+        this.points = [];
+    }
+
+    x(t) {
+        return v0 * cos(this.angle) * t
+    }
+
+    y(t) {
+        return y0 + v0 * sin(this.angle) * t - 0.5 * g * t * t;
+    }
+  
+    position(t) {
+        const x = this.x(t);
+        const y = this.y(t);
+        if (y < 0) {
+            return null;
+        } else {
+            return createVector(this.x(t), max(y, 0));
+        }
+    }
+
+    update_history(pos) {
+        if (pos !== null) {
+            this.points.push(pos);
+            // Remove old points
+            if (this.points.length > Fragment.MAX_HISTORY) {
+                this.points.shift();
+            }
+        } else {
+            // Remove old points
+            if (this.points.length > 1) {
+                this.points.shift();
+            }
+        }
+
+    }
+
+    get last_position() {
+        return this.points[this.points.length - 1];
+    }
+  
+    render(t) {
+        const w = Fragment.SIZE;
+        const pos = this.position(t);
+        this.update_history(pos);
+ 
+        noFill();
+        stroke(255, 255, 0);
+        beginShape(LINES);
+        for (let i = 0; i < this.points.length - 1; i++) {
+            const prev = this.points[i];
+            const next = this.points[i + 1];
+            vertex(prev.x, prev.y);
+            vertex(next.x, next.y);
+        }
+        endShape();
+
+        // Draw a bigger dot at the end of the trajectory
+        fill(255, 255, 0);
+        noStroke();
+        const last_pos = this.last_position;
+        ellipse(last_pos.x - w / 2, last_pos.y - w / 2, w, w);
+    }
 }
 
 
@@ -176,13 +198,12 @@ function setup() {
     envelope = new Envelope();
     scaler = new Scaler();
     rocket = new Rocket(ROCKET_VELOCITY);
-  /* 
-  rocket = new Rocket(EXPLODE_TIME, EXPLODE_HEIGHT);
-  for (let i = 0; i < NUM_FRAGMENTS; i++) {
-    const frag = new Fragment(EXPLODE_TIME, EXPLODE_HEIGHT, SPEED);
-    fragments.push(frag);
-  }
-  */
+
+    for (let i = 0; i < NUM_FRAGMENTS; i++) {
+        const theta = i / NUM_FRAGMENTS * TWO_PI;
+        const frag = new Fragment(theta);
+        fragments.push(frag);
+    }
 }
 
 
@@ -196,21 +217,10 @@ function draw() {
     if (t < EXPLODE_TIME) {
         rocket.render(t)
     } else {
-        //
+        for (let frag of fragments) {
+            frag.render(t - EXPLODE_TIME);
+        }
     }
-
-    /*
-  const t = frameCount / FPS;
-  if (t < EXPLODE_TIME + 0.01) {
-    background(0);
-  }
-  
-  rocket.render(t);
-  
-  for (let frag of fragments) {
-    frag.render(t);
-  }
-  */
 
     scaler.stop_scaling();
 
